@@ -1,17 +1,19 @@
-import React from 'react';
-import { ClerkProvider } from '@clerk/nextjs';
-import { AppProps } from 'next/app';
-import '@/app/globals.css';
-
+import '@/app/globals.css'
+import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import type { AppProps } from 'next/app'
 
 function MyApp({ Component, pageProps }: AppProps) {
-  console.log("Clerk Publishable Key:", process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY); // Temporary logging
-
   return (
-    <ClerkProvider>
+    <ClerkProvider {...pageProps}>
+      <SignedOut>
+        <SignInButton />
+      </SignedOut>
+      <SignedIn>
+        <UserButton />
+      </SignedIn>
       <Component {...pageProps} />
     </ClerkProvider>
-  );
+  )
 }
 
-export default MyApp; 
+export default MyApp
