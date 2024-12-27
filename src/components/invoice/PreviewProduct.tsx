@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductSelling } from "@/types/Product";
 import { Package2, Calendar, RefreshCw } from "lucide-react";
-import axios from "axios";
+import axios from 'axios';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
