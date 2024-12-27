@@ -8,6 +8,20 @@ dotenv.config({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  webpack: (config: Configuration) => {
+    // Ensure that resolve and alias are objects
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+
+    // Type assertion to make TypeScript understand the structure
+    const alias = config.resolve.alias as Record<string, string>;
+
+    // Set the alias
+    alias['@'] = path.join(__dirname, 'src');
+
+    return config;
+  },
   env: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   },
@@ -17,4 +31,4 @@ const nextConfig = {
   // ... other configurations ...
 };
 
-export default nextConfig; 
+export default nextConfig;
