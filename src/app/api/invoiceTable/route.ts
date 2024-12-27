@@ -92,7 +92,118 @@ export async function POST(req: NextRequest) {
       async (prisma) => {
         console.log("Starting database transaction");
 
-        // Create the InvoiceTable entry first
+        // Log the items array
+        console.log("Invoice items:", items);
+
+        // Process product quantities
+        await Promise.all(
+          items.map(async (item) => {
+            console.log("Processing product:", item.productId);
+            const productSelling = await prisma.productSelling.findUnique({
+              where: { id: Number(item.productId) },
+              include: { productPurchase: true }, // Include the related ProductPurchase
+            });
+            console.log("Found productSelling:", productSelling);
+
+            if (!productSelling) {
+              console.error(`Product with ID ${item.productId} not found`);
+              throw new Error(`Product with ID ${item.productId} not found`);
+            }
+
+            // Access the related ProductPurchase
+            const productPurchase = productSelling.productPurchase;
+
+            if (!productPurchase) {
+              console.error(
+                `ProductPurchase not found for ProductSelling ID ${productSelling.id}`
+              );
+              throw new Error(
+                `ProductPurchase not found for ProductSelling ID ${productSelling.id}`
+              );
+            }
+
+            if (productPurchase.productQuantity < Number(item.quantity)) {
+              console.error(
+                `Insufficient quantity for product "${productPurchase.productName}". Available: ${productPurchase.productQuantity}, Requested: ${item.quantity}`
+              );
+              throw new Error(
+                `Insufficient quantity for product "${productPurchase.productName}". Available: ${productPurchase.productQuantity}, Requested: ${item.quantity}`
+              );
+            }
+
+            // Update product quantity in ProductPurchase
+            await prisma.productPurchase.update({
+              where: { id: productPurchase.id },
+              data: {
+                productQuantity: {
+                  decrement: Number(item.quantity),
+                },
+              },
+            });
+            console.log(
+              `Updated quantity for product ID ${productPurchase.id} (${productPurchase.productName})`
+            );
+
+            // Update ProductSelling quantity (if needed)
+            // You might not need this if you're tracking quantity only in ProductPurchase
+            await prisma.productSelling.update({
+              where: { id: Number(item.productId) },
+              data: {
+                quantity: {
+                  decrement: Number(item.quantity),
+                },
+              },
+            });
+            console.log(
+              `Updated ProductSelling quantity for product ID ${item.productId}`
+            );
+          })
+        );
+
+        // Process crate quantities
+        await Promise.all(
+          items
+            .filter((item) => item.crateId && item.crateQuantity > 0)
+            .map(async (item) => {
+              console.log("Processing crate:", item.crateId);
+              const crate = await prisma.crate.findUnique({
+                where: { id: Number(item.crateId) },
+              });
+              console.log("Found crate:", crate);
+
+              if (!crate) {
+                console.error(`Crate with ID ${item.crateId} not found`);
+                throw new Error(`Crate with ID ${item.crateId} not found`);
+              }
+
+              if (crate.crateQuantity < Number(item.crateQuantity)) {
+                console.error(
+                  `Insufficient quantity for crate "${crate.crateName}". Available: ${crate.crateQuantity}, Requested: ${item.crateQuantity}`
+                );
+                throw new Error(
+                  `Insufficient quantity for crate "${crate.crateName}". Available: ${crate.crateQuantity}, Requested: ${item.crateQuantity}`
+                );
+              }
+
+              // Update crate quantity
+              await prisma.crate.update({
+                where: { id: Number(item.crateId) },
+                data: {
+                  crateQuantity: {
+                    decrement: Number(item.crateQuantity),
+                  },
+                },
+              });
+              console.log(`Updated quantity for crate ID ${item.crateId}`);
+            })
+        );
+
+        // Create the InvoiceTable entry
+        console.log("Creating invoice with data:", {
+          companyId,
+          clientId,
+          // ... other invoice data ...
+        });
         const newInvoiceTable = await prisma.invoiceTable.create({
           data: {
             companyId,
@@ -131,74 +242,6 @@ export async function POST(req: NextRequest) {
         });
         console.log("Created new invoice:", newInvoiceTable);
 
-        // Process product quantities
-        await Promise.all(
-          items.map(async (item) => {
-            const productSelling = await prisma.productSelling.findUnique({
-              where: { id: Number(item.productId) },
-            });
-
-            if (!productSelling) {
-              console.error(`Product with ID ${item.productId} not found`);
-              throw new Error(`Product with ID ${item.productId} not found`);
-            }
-
-            if (productSelling.quantity < Number(item.quantity)) {
-              console.error(
-                `Insufficient quantity for product "${productSelling.productPurchaseId}". Available: ${productSelling.quantity}, Requested: ${item.quantity}`,
-              );
-              throw new Error(
-                `Insufficient quantity for product "${productSelling.productPurchaseId}". Available: ${productSelling.quantity}, Requested: ${item.quantity}`,
-              );
-            }
-
-            await prisma.productSelling.update({
-              where: { id: Number(item.productId) },
-              data: {
-                quantity: {
-                  decrement: Number(item.quantity),
-                },
-              },
-            });
-            console.log(`Updated quantity for product ID ${item.productId}`);
-          }),
-        );
-
-        // Process crate quantities
-        await Promise.all(
-          items
-            .filter((item) => item.crateId && item.crateQuantity > 0)
-            .map(async (item) => {
-              const crate = await prisma.crate.findUnique({
-                where: { id: Number(item.crateId) },
-              });
-
-              if (!crate) {
-                console.error(`Crate with ID ${item.crateId} not found`);
-                throw new Error(`Crate with ID ${item.crateId} not found`);
-              }
-
-              if (crate.crateQuantity < Number(item.crateQuantity)) {
-                console.error(
-                  `Insufficient quantity for crate "${crate.crateName}". Available: ${crate.crateQuantity}, Requested: ${item.crateQuantity}`,
-                );
-                throw new Error(
-                  `Insufficient quantity for crate "${crate.crateName}". Available: ${crate.crateQuantity}, Requested: ${item.crateQuantity}`,
-                );
-              }
-
-              await prisma.crate.update({
-                where: { id: Number(item.crateId) },
-                data: {
-                  crateQuantity: {
-                    decrement: Number(item.crateQuantity),
-                  },
-                },
-              });
-              console.log(`Updated quantity for crate ID ${item.crateId}`);
-            }),
-        );
-
         // Create notifications
         const adminsAndModerators = await prisma.user.findMany({
           where: { role: { in: ["ADMIN", "MODERATOR"] } },
@@ -213,17 +256,17 @@ export async function POST(req: NextRequest) {
                 type: "new_invoice",
                 userId: user.clerkUserId,
               },
-            }),
-          ),
+            })
+          )
         );
 
         console.log("Transaction completed successfully");
         return newInvoiceTable;
       },
       {
-        maxWait: 10000, // Maximum time to wait for transaction
-        timeout: 20000, // Maximum time for the transaction to complete
-      },
+        maxWait: 10000,
+        timeout: 20000,
+      }
     );
 
     console.log("Invoice created successfully:", result);
@@ -234,7 +277,8 @@ export async function POST(req: NextRequest) {
 
     // Determine the appropriate error status and message
     let status = 500;
-    let message = "An unexpected error occurred while creating the invoice";
+    let message =
+      "An unexpected error occurred while creating the invoice";
 
     if (err.message.includes("not found")) {
       status = 404;
@@ -243,6 +287,7 @@ export async function POST(req: NextRequest) {
       status = 400;
       message = err.message;
     } else if (err.code === "P2002") {
+      // Prisma duplicate key error
       status = 409;
       message = "A conflict occurred while creating the invoice";
     }
@@ -257,7 +302,7 @@ export async function POST(req: NextRequest) {
           }),
         },
       },
-      { status },
+      { status }
     );
   }
 }
