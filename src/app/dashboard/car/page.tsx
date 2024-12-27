@@ -4,7 +4,6 @@ import React from 'react'
 const Page = () => {
   return (
     <div>
-      hi
       <UnpaidInvoices />
     </div>
   )
