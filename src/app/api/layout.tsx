@@ -19,9 +19,6 @@ const DashboardPage = () => {
     return <div>Loading...</div>;
   }
 
-  console.log("Clerk Publishable Key:", process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY); // Temporary logging
-
-
   // Ensure that the user data is available before rendering the greeting
   const userName = user?.firstName || 'User';
 
