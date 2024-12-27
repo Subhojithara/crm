@@ -177,6 +177,13 @@ const AddInvoice: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(true); // Add loading state
 
+  // State variables for search terms
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [companySearchTerm, setCompanySearchTerm] = useState("");
+  const [carSearchTerm, setCarSearchTerm] = useState("");
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [crateSearchTerm, setCrateSearchTerm] = useState("");
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true); // Set loading to true before fetching
@@ -269,6 +276,16 @@ const AddInvoice: React.FC = () => {
         (product) => product.id === Number(value)
       );
       if (selectedProduct) {
+        // Check if the product is out of stock
+        if (selectedProduct.quantity <= 0) {
+          toast({
+            variant: "destructive",
+            title: "Out of Stock",
+            description: `Product "${selectedProduct.productName}" is out of stock.`,
+          });
+          return; // Prevent adding out-of-stock product
+        }
+
         updatedItems[index].price = selectedProduct.sellingPrice;
         updatedItems[index].productName = selectedProduct.productName;
         updatedItems[index].unit = selectedProduct.unit;
@@ -395,6 +412,22 @@ const AddInvoice: React.FC = () => {
           description: "Please select a customer and a company.",
         });
         return;
+      }
+
+      // Check for sufficient product quantities
+      for (const item of invoiceItems) {
+        const productSelling = productSellings.find(
+          (p) => p.id === item.productId
+        );
+        if (productSelling && productSelling.quantity < item.quantity) {
+          toast({
+            variant: "destructive",
+            title: "Insufficient Quantity",
+            description: `Not enough quantity available for product "${item.productName}". Available: ${productSelling.quantity}, Requested: ${item.quantity}`,
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       const invoiceData = {
@@ -612,13 +645,27 @@ const AddInvoice: React.FC = () => {
                               <SelectValue placeholder="Select a customer" />
                             </SelectTrigger>
                             <SelectContent>
-                              <ScrollArea className="h-48">
+                              <div className="p-2">
+                                <Input
+                                  placeholder="Search customer..."
+                                  onChange={(e) => {
+                                    setCustomerSearchTerm(e.target.value);
+                                  }}
+                                />
+                              </div>
+                              <ScrollArea className="">
                                 <SelectGroup>
-                                  {customers.map((customer) => (
-                                    <SelectItem key={customer.id} value={customer.id.toString()}>
-                                      {customer.name}
-                                    </SelectItem>
-                                  ))}
+                                  {customers
+                                    .filter((customer) =>
+                                      customer.name
+                                        .toLowerCase()
+                                        .includes(customerSearchTerm.toLowerCase())
+                                    )
+                                    .map((customer) => (
+                                      <SelectItem key={customer.id} value={customer.id.toString()}>
+                                        {customer.name}
+                                      </SelectItem>
+                                    ))}
                                 </SelectGroup>
                               </ScrollArea>
                             </SelectContent>
@@ -638,13 +685,27 @@ const AddInvoice: React.FC = () => {
                               <SelectValue placeholder="Select a company" />
                             </SelectTrigger>
                             <SelectContent>
-                              <ScrollArea className="h-48">
+                              <div className="p-2">
+                                <Input
+                                  placeholder="Search company..."
+                                  onChange={(e) => {
+                                    setCompanySearchTerm(e.target.value);
+                                  }}
+                                />
+                              </div>
+                              <ScrollArea className="">
                                 <SelectGroup>
-                                  {companies.map((company) => (
-                                    <SelectItem key={company.id} value={company.id.toString()}>
-                                      {company.name}
-                                    </SelectItem>
-                                  ))}
+                                  {companies
+                                    .filter((company) =>
+                                      company.name
+                                        .toLowerCase()
+                                        .includes(companySearchTerm.toLowerCase())
+                                    )
+                                    .map((company) => (
+                                      <SelectItem key={company.id} value={company.id.toString()}>
+                                        {company.name}
+                                      </SelectItem>
+                                    ))}
                                 </SelectGroup>
                               </ScrollArea>
                             </SelectContent>
@@ -664,13 +725,27 @@ const AddInvoice: React.FC = () => {
                               <SelectValue placeholder="Select a car" />
                             </SelectTrigger>
                             <SelectContent>
-                              <ScrollArea className="h-48">
+                              <div className="p-2">
+                                <Input
+                                  placeholder="Search car..."
+                                  onChange={(e) => {
+                                    setCarSearchTerm(e.target.value);
+                                  }}
+                                />
+                              </div>
+                              <ScrollArea className="">
                                 <SelectGroup>
-                                  {cars.map((car) => (
-                                    <SelectItem key={car.id} value={car.id?.toString() || ""}>
-                                      {car.carNumber} - {car.driverName}
-                                    </SelectItem>
-                                  ))}
+                                  {cars
+                                    .filter((car) =>
+                                      car.carNumber
+                                        .toLowerCase()
+                                        .includes(carSearchTerm.toLowerCase())
+                                    )
+                                    .map((car) => (
+                                      <SelectItem key={car.id} value={car.id?.toString() || ""}>
+                                        {car.carNumber} - {car.driverName}
+                                      </SelectItem>
+                                    ))}
                                 </SelectGroup>
                               </ScrollArea>
                             </SelectContent>
@@ -710,16 +785,32 @@ const AddInvoice: React.FC = () => {
                                   <SelectValue placeholder="Select a product" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <ScrollArea className="h-48">
+                                  <div className="p-2">
+                                    <Input
+                                      placeholder="Search product..."
+                                      onChange={(e) => {
+                                        setProductSearchTerm(e.target.value);
+                                      }}
+                                    />
+                                  </div>
+                                  <ScrollArea className="">
                                     <SelectGroup>
-                                      {productSellings.map((product) => (
-                                        <SelectItem
-                                          key={product.id}
-                                          value={product.id.toString()}
-                                        >
-                                          {product.productName}
-                                        </SelectItem>
-                                      ))}
+                                      {productSellings
+                                        .filter((product) =>
+                                          product.productName
+                                            .toLowerCase()
+                                            .includes(productSearchTerm.toLowerCase())
+                                        )
+                                        .map((product) => (
+                                          <SelectItem
+                                            key={product.id}
+                                            value={product.id.toString()}
+                                            disabled={product.quantity <= 0} // Disable if out of stock
+                                          >
+                                            {product.productName}
+                                            {product.quantity <= 0 ? " (Out of Stock)" : ""}
+                                          </SelectItem>
+                                        ))}
                                     </SelectGroup>
                                   </ScrollArea>
                                 </SelectContent>
@@ -736,13 +827,27 @@ const AddInvoice: React.FC = () => {
                                   <SelectValue placeholder="Select a crate" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <ScrollArea className="h-48">
+                                  <div className="p-2">
+                                    <Input
+                                      placeholder="Search crate..."
+                                      onChange={(e) => {
+                                        setCrateSearchTerm(e.target.value);
+                                      }}
+                                    />
+                                  </div>
+                                  <ScrollArea className="">
                                     <SelectGroup>
-                                      {crates.map((crate) => (
-                                        <SelectItem key={crate.id} value={crate.id.toString()}>
-                                          {crate.crateName} (Qty: {crate.crateQuantity})
-                                        </SelectItem>
-                                      ))}
+                                      {crates
+                                        .filter((crate) =>
+                                          crate.crateName
+                                            .toLowerCase()
+                                            .includes(crateSearchTerm.toLowerCase())
+                                        )
+                                        .map((crate) => (
+                                          <SelectItem key={crate.id} value={crate.id.toString()}>
+                                            {crate.crateName} (Qty: {crate.crateQuantity})
+                                          </SelectItem>
+                                        ))}
                                     </SelectGroup>
                                   </ScrollArea>
                                 </SelectContent>
@@ -795,6 +900,14 @@ const AddInvoice: React.FC = () => {
                               <div className="w-32">
                                 <Label className="text-sm">Price</Label>
                                 <p className="text-2xl font-bold text-primary">₹{item.price.toFixed(2)}</p>
+                              </div>
+
+                              {/* Total Product Price Display */}
+                              <div className="w-32">
+                                <Label className="text-sm">Total Price</Label>
+                                <p className="text-2xl font-bold text-primary">
+                                  ₹{(item.quantity * item.price).toFixed(2)}
+                                </p>
                               </div>
 
                               {/* Preview Product Button */}
@@ -912,6 +1025,14 @@ const AddInvoice: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Total Product Price */}
+                      <div className="p-6 rounded-lg bg-primary/5 border space-y-2">
+                        <Label className="text-sm text-muted-foreground">Total Product Price:</Label>
+                        <p className="text-2xl font-bold text-primary">
+                          ₹{invoiceItems.reduce((sum, item) => sum + item.quantity * item.price, 0).toFixed(2)}
+                        </p>
+                      </div>
 
                       <Button type="submit" className="w-full mt-8">
                         Create Invoice

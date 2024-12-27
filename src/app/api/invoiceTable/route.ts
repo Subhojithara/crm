@@ -99,10 +99,15 @@ export async function POST(req: NextRequest) {
         await Promise.all(
           items.map(async (item) => {
             console.log("Processing product:", item.productId);
+
+            // Include the productPurchase relation here
             const productSelling = await prisma.productSelling.findUnique({
               where: { id: Number(item.productId) },
-              include: { productPurchase: true }, // Include the related ProductPurchase
+              include: { 
+                productPurchase: true 
+              },
             });
+
             console.log("Found productSelling:", productSelling);
 
             if (!productSelling) {
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
               throw new Error(`Product with ID ${item.productId} not found`);
             }
 
-            // Access the related ProductPurchase
+            // Now you can safely access productPurchase and productName
             const productPurchase = productSelling.productPurchase;
 
             if (!productPurchase) {
@@ -122,7 +127,8 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            if (productPurchase.productQuantity < Number(item.quantity)) {
+            // Prevent negative quantity
+            if (productPurchase.productQuantity - Number(item.quantity) < 0) {
               console.error(
                 `Insufficient quantity for product "${productPurchase.productName}". Available: ${productPurchase.productQuantity}, Requested: ${item.quantity}`
               );
@@ -143,6 +149,16 @@ export async function POST(req: NextRequest) {
             console.log(
               `Updated quantity for product ID ${productPurchase.id} (${productPurchase.productName})`
             );
+
+            // Prevent negative quantity
+            if (productSelling.quantity - Number(item.quantity) < 0) {
+              console.error(
+                `Insufficient quantity for product "${productPurchase.productName}". Available: ${productSelling.quantity}, Requested: ${item.quantity}`
+              );
+              throw new Error(
+                `Insufficient quantity for product "${productPurchase.productName}". Available: ${productSelling.quantity}, Requested: ${item.quantity}`
+              );
+            }
 
             // Update ProductSelling quantity (if needed)
             // You might not need this if you're tracking quantity only in ProductPurchase
