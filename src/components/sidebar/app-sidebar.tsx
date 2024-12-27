@@ -19,7 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ClerkProvider } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -213,6 +213,15 @@ function SidebarContent({ isDialogOpen }: SidebarContentProps) {
     fetchCompanies();
   }, []);
 
+    const companyName = useMemo(() => {
+        return selectedCompany?.name || "No Company";
+    }, [selectedCompany]);
+
+    const companyEmail = useMemo(() => {
+        return selectedCompany?.email || "No Email";
+    }, [selectedCompany]);
+
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -260,10 +269,10 @@ function SidebarContent({ isDialogOpen }: SidebarContentProps) {
                   {isSidebarOpen && (
                     <div className="flex flex-1 flex-col items-start text-sm">
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {selectedCompany?.name || "No Company"}
+                        {companyName}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {selectedCompany?.email || "No Email"}
+                        {companyEmail}
                       </span>
                     </div>
                   )}
