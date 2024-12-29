@@ -17,7 +17,7 @@ export const fetchRecentInvoices = async (userId: string): Promise<Invoice[]> =>
 
 // Placeholder for fetching recent payments
 export const fetchRecentPayments = async (userId: string): Promise<Payment[]> => {
-  const response = await fetch(`/api/payments?userId=${userId}&limit=10`); // Example API call
+  const response = await fetch(`/api/payments?userId=${userId}&limit=5`); // Call the API route
   if (!response.ok) {
     throw new Error('Failed to fetch recent payments');
   }

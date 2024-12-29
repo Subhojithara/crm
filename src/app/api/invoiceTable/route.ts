@@ -615,116 +615,96 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { userId } = getAuth(req);
-  console.log("Authenticated user ID:", userId);
-
-  if (!userId) {
-    console.error("Authentication failed: User ID not found");
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 },
-    );
-  }
-
   try {
-    const body = await req.json();
-    console.log("Request Body:", body);
+    const { userId } = getAuth(req);
+    console.log("Authenticated user ID (PATCH):", userId);
 
-    if ("paymentAmount" in body) {
-      const { id, paymentAmount, paymentMethod } = body;
-
-      if (
-        typeof id !== "number" ||
-        typeof paymentAmount !== "number" ||
-        paymentAmount <= 0
-      ) {
-        console.error("Invalid payment data:", body);
-        return NextResponse.json(
-          { error: "Invalid payment data" },
-          { status: 400 },
-        );
-      }
-
-      const invoice = await prisma.invoiceTable.findUnique({ where: { id } });
-
-      if (!invoice) {
-        console.error("Invoice not found for ID:", id);
-        return NextResponse.json(
-          { error: "Invoice not found" },
-          { status: 404 },
-        );
-      }
-
-      if (invoice.paymentStatus === "PAID") {
-        console.warn("Invoice already paid for ID:", id);
-        return NextResponse.json(
-          { error: "Invoice already paid" },
-          { status: 400 },
-        );
-      }
-
-      if (invoice.amountPaid + paymentAmount > invoice.netAmount) {
-        console.error("Payment exceeds net amount for invoice ID:", id);
-        return NextResponse.json(
-          { error: "Payment exceeds net amount" },
-          { status: 400 },
-        );
-      }
-
-      const updatedInvoice = await prisma.$transaction(async (tx) => {
-        console.log("Starting database transaction for payment update");
-
-        const updated = await tx.invoiceTable.update({
-          where: { id },
-          data: {
-            amountPaid: invoice.amountPaid + paymentAmount,
-            paymentStatus:
-              invoice.amountPaid + paymentAmount >= invoice.netAmount
-                ? "PAID"
-                : "UNPAID",
-            updatedAt: new Date(),
-          },
-        });
-        console.log("Updated invoice for payment:", updated);
-
-        // Create a new payment record
-        console.log("Creating new payment record for invoice ID:", id);
-        await tx.payment.create({
-          data: {
-            invoiceId: id,
-            amount: paymentAmount,
-            paymentMethod: paymentMethod || "Unknown",
-            paymentDate: new Date(),
-          },
-        });
-
-        // Create notification for payment
-        const adminsAndModerators = await prisma.user.findMany({
-          where: { role: { in: ["ADMIN", "MODERATOR"] } },
-        });
-        console.log(
-          "Creating notifications for admins and moderators about payment",
-        );
-
-        for (const user of adminsAndModerators) {
-          await prisma.notification.create({
-            data: {
-              message: `Payment of ${paymentAmount} received for invoice ID: ${id}`,
-              type: "new_payment",
-              userId: user.clerkUserId,
-            },
-          });
-        }
-
-        console.log("Transaction completed successfully");
-        return updated;
-      });
-
-      console.log("Invoice updated with payment:", updatedInvoice);
-      return NextResponse.json(updatedInvoice, { status: 200 });
+    if (!userId) {
+      console.error("Authentication failed: User ID not found");
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
-    // ... existing PATCH logic for updating invoices
+    const body = await req.json();
+    console.log("Request Body (PATCH):", body);
+    const { id, paymentAmount, paymentMethod } = body;
+
+    // Validate input
+    if (!id || paymentAmount === undefined) {
+      console.error("Invalid input data:", body);
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 },
+      );
+    }
+
+    // Fetch the invoice to update
+    const invoice = await prisma.invoiceTable.findUnique({
+      where: { id },
+    });
+
+    if (!invoice) {
+      console.error("Invoice not found:", id);
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    // Update invoice and create payment within a transaction
+    const updatedInvoice = await prisma.$transaction(async (tx) => {
+      console.log("Starting database transaction for payment update");
+
+      const updated = await tx.invoiceTable.update({
+        where: { id },
+        data: {
+          amountPaid: invoice.amountPaid + paymentAmount,
+          paymentStatus:
+            invoice.amountPaid + paymentAmount >= invoice.netAmount
+              ? "PAID"
+              : "UNPAID",
+          updatedAt: new Date(),
+        },
+      });
+      console.log("Updated invoice for payment:", updated);
+
+      // Create a new payment record
+      console.log("Creating new payment record for invoice ID:", id);
+      await tx.payment.create({
+        data: {
+          invoiceId: id,
+          amount: paymentAmount,
+          paymentMethod: paymentMethod || "Unknown",
+          paymentDate: new Date(),
+          userId: userId,
+        },
+      });
+
+      // Create notification for payment
+      const adminsAndModerators = await prisma.user.findMany({
+        where: { role: { in: ["ADMIN", "MODERATOR"] } },
+      });
+      console.log(
+        "Creating notifications for admins and moderators about payment",
+      );
+
+      for (const user of adminsAndModerators) {
+        await prisma.notification.create({
+          data: {
+            message: `Payment of ${paymentAmount} received for invoice ID: ${id}`,
+            type: "new_payment",
+            userId: user.clerkUserId,
+          },
+        });
+      }
+
+      console.log("Transaction completed successfully");
+      return updated;
+    });
+
+    console.log("Invoice updated with payment:", updatedInvoice);
+    return NextResponse.json(updatedInvoice, { status: 200 });
+
+    // ... existing PATCH logic for updating invoices (if any)
   } catch (error: unknown) {
     const err = error as CustomError;
     console.error("Error updating InvoiceTable entry:", err);

@@ -25,6 +25,7 @@ model User {
   crates           Crate[]            // Added relation to Crate
   car              Car[]
   invoices         InvoiceTable[]
+  payments         Payment[]
 }
 
 enum Role {
@@ -227,10 +228,13 @@ model Payment {
   paymentMethod String
   createdAt     DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @db.Timestamptz(6)
+  userId        String
   // Relations
   invoice       InvoiceTable @relation(fields: [invoiceId], references: [id], name: "InvoicePayments")
+  user          User         @relation(fields: [userId], references: [clerkUserId])
 
   @@index([invoiceId])
+  @@index([userId])
 }
 
 enum PaymentStatus {

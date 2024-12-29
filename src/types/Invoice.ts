@@ -61,8 +61,8 @@ export interface Car {
 }
 
 export interface Payment {
-  id: number;
-  invoiceId: number;
+  id: string;
+  invoiceId: string;
   amount: number;
   paymentDate: string;
   paymentMethod: string;
@@ -91,6 +91,7 @@ export interface Invoice {
   createdAt: string;
   updatedAt: string;
   carDetails: Car;
+  userId: string;
 }
 
 export interface Totals {

@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
         include: {
           company: true,
           client: true,
+          user: true,
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
         include: {
           company: true,
           client: true,
+          user: true,
         },
         orderBy: { createdAt: 'desc' },
       });

@@ -130,6 +130,7 @@ const InvoiceTransaction: React.FC<InvoiceTransactionProps> = ({
         paymentMethod,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: invoice.userId,
       };
 
       setPayments([...payments, newPayment]);

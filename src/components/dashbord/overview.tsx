@@ -107,55 +107,59 @@ const Dashboard = () => {
             ["ADMIN", "MODERATOR", "MEMBER"].includes(userProfile.role)
           ) {
             const invoices = await fetchRecentInvoices(userId);
-            const payments = await fetchRecentPayments(userId);
+            const userPayments = await fetchRecentPayments(userId);
 
             setRecentInvoices(invoices);
             setFilteredInvoices(invoices);
-            setRecentPayments(payments);
-            setFilteredPayments(payments);
 
-            // Prepare data for the chart
-            const sales: SalesData[] = invoices.map((invoice) => ({
+            // No need to manually map payments here anymore
+            setRecentPayments(userPayments);
+            setFilteredPayments(userPayments);
+
+            // Calculate total revenue from invoices
+            const newTotalRevenue = invoices.reduce(
+              (sum, invoice) => sum + invoice.netAmount,
+              0
+            );
+            setTotalRevenue(newTotalRevenue);
+
+            // Calculate total payments
+            const newTotalPayments = userPayments.reduce(
+              (sum, payment) => sum + payment.amount,
+              0
+            );
+            setTotalPayments(newTotalPayments);
+
+            // Calculate received amount from payments
+            const newReceivedAmount = userPayments.reduce(
+              (sum, payment) => sum + payment.amount,
+              0
+            );
+            setReceivedAmount(newReceivedAmount);
+
+            // Calculate unpaid amount from invoices
+            const newUnpaidAmount = invoices
+              .filter((invoice) => invoice.paymentStatus === "UNPAID")
+              .reduce((sum, invoice) => sum + invoice.netAmount, 0);
+            setUnpaidAmount(newUnpaidAmount);
+
+            // Prepare sales data from invoices
+            const newSalesData = invoices.map((invoice) => ({
               createdAt: invoice.createdAt,
               revenue: invoice.netAmount,
               orders: 1, // Assuming each invoice represents one order
             }));
-
-            // Update setSalesData to include filtering by time
-            setSalesData(filterSalesData(sales, timeFilter));
-
-            // Calculate totals
-            const revenue = invoices.reduce(
-              (sum, invoice) => sum + invoice.netAmount,
-              0
-            );
-            const unpaid = invoices.filter(
-              (inv) => inv.paymentStatus === "UNPAID"
-            );
-
-            // Calculate received amount
-            const received = revenue - unpaid.reduce((sum, inv) => sum + inv.netAmount, 0);
-
-            setTotalRevenue(revenue);
-            setReceivedAmount(received);
-            setUnpaidAmount(
-              unpaid.reduce((sum, inv) => sum + inv.netAmount, 0)
-            );
-
-            // Calculate total payments
-            const totalPaymentsValue = payments.reduce((sum, payment) => sum + payment.amount, 0);
-            setTotalPayments(totalPaymentsValue);
-
+            setSalesData(newSalesData);
           } else {
             setError("You do not have permission to view this dashboard.");
           }
         } catch (err) {
-          console.error("Error fetching dashboard data:", err);
           if (err instanceof Error) {
             setError(err.message);
           } else {
-            setError("An error occurred while fetching data.");
+            setError("An unexpected error occurred.");
           }
+          console.error(err);
         } finally {
           setIsLoading(false);
         }
