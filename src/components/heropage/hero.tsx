@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from '@radix-ui/react-scroll-area'
+import Image from 'next/image'
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -387,7 +388,7 @@ export default function HeroPage() {
                       &quot;{testimonial.quote}&quot;
                       </p>
                       <div className="flex items-center">
-                        <img
+                        <Image
                           src={testimonial.avatar}
                           alt={`${testimonial.author} avatar`}
                           className="w-12 h-12 rounded-full mr-4"

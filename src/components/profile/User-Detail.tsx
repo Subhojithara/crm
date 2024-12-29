@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toast } from "@/components/ui/toast"
 import { Pencil, X, Check } from 'lucide-react'
+import Image from 'next/image'
 
 const UserDetail: React.FC = () => {
   const { user } = useUser()
@@ -108,7 +109,7 @@ const UserDetail: React.FC = () => {
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               {formData.imageUrl ? (
-                <img
+                <Image
                   src={formData.imageUrl}
                   alt="Profile"
                   className="w-32 h-32 rounded-full border-4 border-primary"

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         address,
         email,
         number,
-        clerkUserId: userId, // Include clerkUserId
+        clerkUserId: userId.toString(), // Convert userId to string
       },
     });
 
@@ -76,11 +76,26 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating seller:', error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { // Prisma unique constraint failed
-      return NextResponse.json(
-        { error: 'A seller with this email or clerkUserId already exists.' },
-        { status: 409 }
-      );
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        const target = error.meta?.target as string[];
+        if (target.includes('email')) {
+          return NextResponse.json(
+            { error: 'A seller with this email already exists.' },
+            { status: 409 }
+          );
+        } else if (target.includes('clerkUserId')) {
+          return NextResponse.json(
+            { error: 'A seller with this clerkUserId already exists.' },
+            { status: 409 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: 'A unique constraint violation occurred.' },
+            { status: 409 }
+          );
+        }
+      }
     }
 
     return NextResponse.json({ error: 'Error creating seller' }, { status: 500 });

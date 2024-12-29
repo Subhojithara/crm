@@ -117,7 +117,7 @@ interface NotificationTableProps {
 function NotificationTable({
   notifications,
   handleMarkAsRead,
-  handleDelete,
+  // handleDelete,
 }: NotificationTableProps) {
   const columns: ColumnDef<Notification>[] = [
     {
@@ -208,9 +208,9 @@ function NotificationTable({
                   Mark as read
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => handleDelete(notification.id)}>
+              {/* <DropdownMenuItem onClick={() => handleDelete(notification.id)}>
                 Delete
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuContent>
           </DropdownMenu>
         )

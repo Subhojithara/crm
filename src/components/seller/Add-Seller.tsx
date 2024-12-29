@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 
 interface Seller {
   id: number;
@@ -39,6 +40,7 @@ const AddSellerDialog: React.FC<AddSellerDialogProps> = ({ setIsOpen }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const fetchSellers = async () => {
     setIsLoading(true);
@@ -71,9 +73,18 @@ const AddSellerDialog: React.FC<AddSellerDialogProps> = ({ setIsOpen }) => {
       setSellers([...sellers, response.data]);
       setForm({ name: '', address: '', email: '', number: '' });
       setIsOpen(false);
+      toast({
+        title: "Success",
+        description: "Seller added successfully",
+      });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error adding seller';
       setError(errorMsg);
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
