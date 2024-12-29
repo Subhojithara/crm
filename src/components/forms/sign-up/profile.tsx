@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { User } from "@/types/User";
@@ -94,12 +93,15 @@ export default function Profile() {
     fetchData();
   }, [isLoaded, user?.id]);
 
-  const filterData = (data: any[], term: string) => {
+  const filterData = <T extends object>(data: T[], term: string): T[] => {
     if (!term) return data;
-    return data.filter(item => 
-      Object.values(item).some(value => 
-        String(value).toLowerCase().includes(term.toLowerCase())
-      )
+    return data.filter(item =>
+      Object.values(item).some(value => {
+        if (value === null || value === undefined) {
+          return false;
+        }
+        return String(value).toLowerCase().includes(term.toLowerCase());
+      })
     );
   };
 
