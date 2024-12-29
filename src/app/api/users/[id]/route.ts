@@ -19,18 +19,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { role } = await request.json();
+    const body = await request.json();
     const { id } = await params;
-
-    // Validate role
-    if (!['USER', 'ADMIN', 'MODERATOR', 'MEMBER'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-    }
 
     // Update user in Prisma database
     const user = await prisma.user.update({
       where: { id: Number(id) },
-      data: { role },
+      data: {
+        ...body,
+        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
+      },
     });
 
     // Fetch the user from Prisma to get the clerkUserId
@@ -51,7 +49,7 @@ export async function PUT(
     // Update user's role in Clerk using updateUserMetadata
     await client.users.updateUserMetadata(clerkUser.clerkUserId, {
       publicMetadata: {
-        role: role,
+        role: body.role,
       },
     });
 

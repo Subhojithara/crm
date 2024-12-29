@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
       where: { clerkUserId: userId },
       select: {
         name: true,
+        username: true,
+        number: true,
+        bio: true,
+        dateOfBirth: true,
         role: true,
         // Add other fields you need
       },
