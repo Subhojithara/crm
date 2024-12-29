@@ -28,19 +28,28 @@ export default function UserForm() {
   const [date, setDate] = React.useState<Date | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [profileExists, setProfileExists] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [profileExists, setProfileExists] = React.useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { isLoaded, user } = useUser();
 
   React.useEffect(() => {
     const checkUserProfile = async () => {
+      if (!isLoaded || !user) {
+        return;
+      }
+
+      setIsLoading(true);
       try {
-        const response = await fetch('/api/users/profile');
-        
+        const response = await fetch(`/api/users/profile?userId=${user.id}`);
+
         if (!response.ok) {
+          if (response.status === 404) {
+            setProfileExists(false);
+            return;
+          }
           throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
 
@@ -48,6 +57,8 @@ export default function UserForm() {
 
         if (data.profile) {
           setProfileExists(true);
+        } else {
+          setProfileExists(false);
         }
       } catch (error) {
         console.error('Error checking user profile:', error);
@@ -56,14 +67,39 @@ export default function UserForm() {
           description: "Failed to check user profile. Please try again later.",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkUserProfile();
-  }, [toast]);
+  }, [isLoaded, user, toast]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-md mx-auto p-6 space-y-6">
+        <div className="space-y-2 text-center">
+          <h2 className="text-3xl font-bold">User Profile</h2>
+          <p className="text-muted-foreground">Please wait while we check your profile...</p>
+        </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, index) => (
+            <Skeleton key={index} className="h-14 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (profileExists) {
-    return <div>You have already filled out your profile.</div>;
+    return (
+      <div className="max-w-md mx-auto p-6 space-y-6">
+        <div className="space-y-2 text-center">
+          <h2 className="text-3xl font-bold">User Profile</h2>
+          <p className="text-muted-foreground">You have already filled out your profile.</p>
+        </div>
+      </div>
+    );
   }
 
   const updateFormData = (field: keyof User, value: string | Date | undefined) => {
@@ -73,16 +109,6 @@ export default function UserForm() {
   const progressPercentage = (step / 2) * 100
 
   const renderStep = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, index) => (
-            <Skeleton key={index} className="h-14 w-full" />
-          ))}
-        </div>
-      );
-    }
-
     switch (step) {
       case 1:
         return (
@@ -101,13 +127,19 @@ export default function UserForm() {
             <div className="space-y-2">
               <Label>Profile Image</Label>
               <div className="flex items-center">
-                {user?.imageUrl ? (
-                  <Image src={user.imageUrl} alt="Profile" width={80} height={80} className="rounded-full" />
-                ) : (
-                  <div className="h-24 w-24 rounded-full bg-gray-200" />
+                {user?.imageUrl && (
+                  <Image
+                    src={user.imageUrl}
+                    alt="Profile"
+                    width={80}
+                    height={80}
+                    className="rounded-full"
+                  />
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">Upload a profile image.</p>
+              <p className="text-sm text-muted-foreground">
+                This is your profile image from Clerk.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
