@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { isValid } from 'date-fns';
-import { Mail, Phone, Calendar, User2, ShoppingCart, FileText, CreditCard, Search, Filter } from "lucide-react";
+import { Mail, Phone, Calendar, User2, ShoppingCart, FileText, CreditCard, Search} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -24,7 +24,6 @@ import { Invoice } from "@/types/Invoice";
 import { Payment } from "@/types/Payment";
 import { ProductPurchase } from "@/types/Product";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Tabs,
   TabsContent,
