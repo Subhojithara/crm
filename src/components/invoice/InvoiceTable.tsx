@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, FileText, Download } from "lucide-react"
+import { ArrowUpDown, ChevronDown, MoreHorizontal, FileText, Download, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -45,6 +45,7 @@ import * as XLSX from 'xlsx'
 import { Customer } from '@/types/Customer'
 import { ScrollArea, ScrollBar } from "../ui/scroll-area"
 import InvoiceDownloadAndPreview from '@/components/invoice/InvoiceDownloadAndPreview'
+import { useUser } from "@clerk/nextjs"
 
 interface InvoiceTableProps {
   customerId?: number;
@@ -56,18 +57,40 @@ interface FetchError extends Error {
 }
 
 export default function InvoiceTable({ customerId }: InvoiceTableProps) {
+  const { user } = useUser();
   const { toast } = useToast()
   const [invoices, setInvoices] = React.useState<Invoice[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
-  const [invoiceToDelete, setInvoiceToDelete] = React.useState<number | null>(null)
+  const [invoiceToDelete, setInvoiceToDelete] = React.useState<Invoice | null>(null)
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = React.useState(false)
   const [transactionInvoice, setTransactionInvoice] = React.useState<Invoice | null>(null)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [userRole, setUserRole] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const response = await fetch(`/api/users/profile?userId=${user?.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setUserRole(data.profile.role);
+        } else {
+          console.error("Failed to fetch user role");
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    };
+
+    if (user?.id) {
+      fetchUserRole();
+    }
+  }, [user?.id]);
 
   React.useEffect(() => {
     const fetchInvoices = async () => {
@@ -329,6 +352,8 @@ export default function InvoiceTable({ customerId }: InvoiceTableProps) {
       id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
+        const isAdmin = userRole === "ADMIN";
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -339,10 +364,6 @@ export default function InvoiceTable({ customerId }: InvoiceTableProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => alert(`View Invoice ${row.original.id}`)}>
-                View
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
                   setTransactionInvoice(row.original);
@@ -352,10 +373,24 @@ export default function InvoiceTable({ customerId }: InvoiceTableProps) {
                 Record Payment
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {isAdmin && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setInvoiceToDelete(row.original);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                    Delete
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <InvoiceDownloadAndPreview invoice={row.original} />
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
   ];
@@ -538,11 +573,8 @@ export default function InvoiceTable({ customerId }: InvoiceTableProps) {
             <Button
               variant="destructive"
               onClick={() => {
-                if (invoiceToDelete !== null) {
-                  const invoice = invoices.find(invoice => invoice.id === invoiceToDelete);
-                  if (invoice) {
-                    handleDeleteInvoice(invoice);
-                  }
+                if (invoiceToDelete) {
+                  handleDeleteInvoice(invoiceToDelete);
                   setIsDeleteDialogOpen(false);
                   setInvoiceToDelete(null);
                 }

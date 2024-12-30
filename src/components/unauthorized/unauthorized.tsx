@@ -16,7 +16,7 @@ const UnauthorizedPage = () => {
           <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500" />
           <h1 className="mt-6 text-3xl font-bold text-gray-900">Access Denied</h1>
           <p className="mt-2 text-gray-600">
-            You don't have permission to access this page.
+            You don&apos;t have permission to access this page.
           </p>
         </div>
 
