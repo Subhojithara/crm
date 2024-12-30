@@ -38,3 +38,10 @@ export const handleError = (error: unknown) => {
   throw new Error(errorMessage);
 };
 
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "INR", // You can change the currency as needed
+  }).format(amount);
+};
+

@@ -2,7 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { fetchRecentInvoices, fetchRecentPayments, fetchUserProfile } from "@/lib/data-fetching";
+import {
+  fetchRecentInvoices,
+  fetchRecentPayments,
+  fetchUserProfile,
+} from "@/lib/data-fetching";
 import { Invoice, Payment } from "@/types/Invoice";
 import { User as DBUser } from "@/types/User";
 import { Button } from "@/components/ui/button";
@@ -13,6 +17,10 @@ import OverviewCardsManager from "./OverviewCardsManager";
 import SalesChart from "./SalesChart";
 import RecentInvoices from "./RecentInvoices";
 import RecentPayments from "./RecentPayments";
+import RecentActivity from "./RecentActivity";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SalesData {
   createdAt: string;
@@ -34,28 +42,40 @@ const Dashboard = () => {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [receivedAmount, setReceivedAmount] = useState(0);
   const [unpaidAmount, setUnpaidAmount] = useState(0);
-  const [timeFilter, setTimeFilter] = useState<"hour" | "day" | "month" | "year">("month");
-  const [searchTerm, setSearchTerm] = useState('');
-  const [paymentSearchTerm, setPaymentSearchTerm] = useState('');
+  const [timeFilter, setTimeFilter] = useState<
+    "hour" | "day" | "month" | "year"
+  >("month");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [paymentSearchTerm, setPaymentSearchTerm] = useState("");
   const [totalPayments, setTotalPayments] = useState(0);
+  const [activeTab, setActiveTab] = useState("sales");
 
-  const filterSalesData = (data: SalesData[], filter: "hour" | "day" | "month" | "year") => {
+  const filterSalesData = (
+    data: SalesData[],
+    filter: "hour" | "day" | "month" | "year",
+  ) => {
     const now = new Date();
-    return data.filter(item => {
+    return data.filter((item) => {
       const itemDate = new Date(item.createdAt);
       switch (filter) {
         case "hour":
-          return now.getHours() === itemDate.getHours() &&
+          return (
+            now.getHours() === itemDate.getHours() &&
             now.getDate() === itemDate.getDate() &&
             now.getMonth() === itemDate.getMonth() &&
-            now.getFullYear() === itemDate.getFullYear();
+            now.getFullYear() === itemDate.getFullYear()
+          );
         case "day":
-          return now.getDate() === itemDate.getDate() &&
+          return (
+            now.getDate() === itemDate.getDate() &&
             now.getMonth() === itemDate.getMonth() &&
-            now.getFullYear() === itemDate.getFullYear();
+            now.getFullYear() === itemDate.getFullYear()
+          );
         case "month":
-          return now.getMonth() === itemDate.getMonth() &&
-            now.getFullYear() === itemDate.getFullYear();
+          return (
+            now.getMonth() === itemDate.getMonth() &&
+            now.getFullYear() === itemDate.getFullYear()
+          );
         case "year":
           return now.getFullYear() === itemDate.getFullYear();
         default:
@@ -66,14 +86,14 @@ const Dashboard = () => {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    if (term.trim() === '') {
+    if (term.trim() === "") {
       setFilteredInvoices(recentInvoices);
     } else {
       const lowerTerm = term.toLowerCase();
       const filtered = recentInvoices.filter(
         (invoice) =>
           invoice.client.name.toLowerCase().includes(lowerTerm) ||
-          invoice.id.toString().includes(lowerTerm)
+          invoice.id.toString().includes(lowerTerm),
       );
       setFilteredInvoices(filtered);
     }
@@ -81,14 +101,14 @@ const Dashboard = () => {
 
   const handlePaymentSearch = (term: string) => {
     setPaymentSearchTerm(term);
-    if (term.trim() === '') {
+    if (term.trim() === "") {
       setFilteredPayments(recentPayments);
     } else {
       const lowerTerm = term.toLowerCase();
       const filtered = recentPayments.filter(
         (payment) =>
           payment.invoiceId.toString().includes(lowerTerm) ||
-          payment.amount.toString().includes(lowerTerm)
+          payment.amount.toString().includes(lowerTerm),
       );
       setFilteredPayments(filtered);
     }
@@ -111,43 +131,36 @@ const Dashboard = () => {
 
             setRecentInvoices(invoices);
             setFilteredInvoices(invoices);
-
-            // No need to manually map payments here anymore
             setRecentPayments(userPayments);
             setFilteredPayments(userPayments);
 
-            // Calculate total revenue from invoices
             const newTotalRevenue = invoices.reduce(
               (sum, invoice) => sum + invoice.netAmount,
-              0
+              0,
             );
             setTotalRevenue(newTotalRevenue);
 
-            // Calculate total payments
             const newTotalPayments = userPayments.reduce(
               (sum, payment) => sum + payment.amount,
-              0
+              0,
             );
             setTotalPayments(newTotalPayments);
 
-            // Calculate received amount from payments
             const newReceivedAmount = userPayments.reduce(
               (sum, payment) => sum + payment.amount,
-              0
+              0,
             );
             setReceivedAmount(newReceivedAmount);
 
-            // Calculate unpaid amount from invoices
             const newUnpaidAmount = invoices
               .filter((invoice) => invoice.paymentStatus === "UNPAID")
               .reduce((sum, invoice) => sum + invoice.netAmount, 0);
             setUnpaidAmount(newUnpaidAmount);
 
-            // Prepare sales data from invoices
             const newSalesData = invoices.map((invoice) => ({
               createdAt: invoice.createdAt,
               revenue: invoice.netAmount,
-              orders: 1, // Assuming each invoice represents one order
+              orders: 1,
             }));
             setSalesData(newSalesData);
           } else {
@@ -170,7 +183,6 @@ const Dashboard = () => {
   }, [isLoaded, userId]);
 
   useEffect(() => {
-    // Update sales data whenever timeFilter changes
     setSalesData((prevSalesData) => filterSalesData(prevSalesData, timeFilter));
   }, [timeFilter]);
 
@@ -202,53 +214,106 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 normal-case">
-            Welcome back, {dbUser?.role} {user?.firstName}!
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Here&apos;s what&apos;s happening with your business today.
-          </p>
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="w-full space-y-6"
+    >
+      <div className="px-6 pt-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 normal-case">
+              Welcome back, {dbUser?.role} {user?.firstName}!
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Here&apos;s what&apos;s happening with your business today.
+            </p>
+          </div>
+          <Button variant="outline" className="flex items-center gap-2">
+            <BellIcon className="h-4 w-4" />
+            Notifications
+          </Button>
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
-          <BellIcon className="h-4 w-4" />
-          Notifications
-        </Button>
+
+        <OverviewCardsManager
+          totalRevenue={totalRevenue}
+          receivedAmount={receivedAmount}
+          unpaidAmount={unpaidAmount}
+        />
+
+        <SalesChart
+          salesData={filterSalesData(salesData, timeFilter)}
+          paymentData={recentPayments}
+          timeFilter={timeFilter}
+          setTimeFilter={(filter: "hour" | "day" | "month" | "year" | "all") =>
+            setTimeFilter(filter as "hour" | "day" | "month" | "year")
+          }
+          totalRevenue={totalRevenue}
+          totalPayments={totalPayments}
+        />
+
+        <TabsList className="grid grid-cols-4 gap-4 bg-transparent h-auto pt-8">
+          <TabsTrigger
+            value="sales"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2"
+          >
+            Sales
+          </TabsTrigger>
+          <TabsTrigger
+            value="invoices"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2"
+          >
+            Invoices
+          </TabsTrigger>
+          <TabsTrigger
+            value="payments"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2"
+          >
+            Payments
+          </TabsTrigger>
+        </TabsList>
       </div>
 
-      {/* Overview Cards */}
-      <OverviewCardsManager
-        totalRevenue={totalRevenue}
-        receivedAmount={receivedAmount}
-        unpaidAmount={unpaidAmount}
-      />
+      <TabsContent value="sales" className="p-6 space-y-6 mt-0">
+        <RecentActivity invoices={recentInvoices} payments={recentPayments} />
+      </TabsContent>
 
-      {/* Charts Section */}
-      <SalesChart
-        salesData={filterSalesData(salesData, timeFilter)}
-        paymentData={recentPayments}
-        timeFilter={timeFilter}
-        setTimeFilter={(filter: "hour" | "day" | "month" | "year" | "all") => setTimeFilter(filter as "hour" | "day" | "month" | "year")}
-        totalRevenue={totalRevenue}
-        totalPayments={totalPayments}
-      />
+      <TabsContent value="invoices" className="p-6 space-y-6 mt-0">
+        <div className="space-y-4">
+          <Label htmlFor="invoice-search">Search Invoices</Label>
+          <Input
+            id="invoice-search"
+            placeholder="Search by client name or invoice ID..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+        <RecentInvoices
+          invoices={filteredInvoices}
+          searchTerm={searchTerm}
+          handleSearch={handleSearch}
+        />
+      </TabsContent>
 
-      <RecentInvoices
-        invoices={filteredInvoices}
-        searchTerm={searchTerm}
-        handleSearch={handleSearch}
-      />
-
-      {/* Recent Payments Table */}
-      <RecentPayments
-        payments={filteredPayments}
-        paymentSearchTerm={paymentSearchTerm}
-        handlePaymentSearch={handlePaymentSearch}
-      />
-    </div>
+      <TabsContent value="payments" className="p-6 space-y-6 mt-0">
+        <div className="space-y-4">
+          <Label htmlFor="payment-search">Search Payments</Label>
+          <Input
+            id="payment-search"
+            placeholder="Search by invoice ID or amount..."
+            value={paymentSearchTerm}
+            onChange={(e) => handlePaymentSearch(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+        <RecentPayments
+          payments={filteredPayments}
+          paymentSearchTerm={paymentSearchTerm}
+          handlePaymentSearch={handlePaymentSearch}
+        />
+      </TabsContent>
+    </Tabs>
   );
 };
 

@@ -121,7 +121,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const allowedRoles = ['ADMIN', 'MODERATOR', 'USER'];
+    // Allow ADMIN, MODERATOR, and MEMBER roles
+    const allowedRoles = ['ADMIN', 'MODERATOR', 'MEMBER'];
     if (!allowedRoles.includes(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

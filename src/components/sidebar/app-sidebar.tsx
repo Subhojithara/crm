@@ -39,7 +39,6 @@ import { Company } from "@/types/Company";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import AddCompany from "../company/Add-Company";
 
 interface NavItem {
   title: string;
@@ -308,7 +307,6 @@ function SidebarContent({ isDialogOpen }: SidebarContentProps) {
                   ))}
                 </DropdownMenuContent>
               )}
-              <AddCompany />
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>

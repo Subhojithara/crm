@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { isValid } from 'date-fns';
-import { Mail, Phone, Calendar, User2, ShoppingCart, FileText, CreditCard, Search} from "lucide-react";
+import { Mail, Phone, Calendar, User2, ShoppingCart, FileText, CreditCard, Search } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -36,6 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Profile() {
   const { user, isLoaded } = useUser();
@@ -51,6 +53,8 @@ export default function Profile() {
   // Add states for filters
   const [invoiceFilter, setInvoiceFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+
+  const isAdmin = profile?.role === "ADMIN";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +73,7 @@ export default function Profile() {
         const [profileResponse, customerResponse, invoiceResponse, paymentResponse, productResponse] = responses;
 
         if (!profileResponse.ok) throw new Error("Failed to fetch profile");
-        
+
         const profileData = await profileResponse.ok ? await profileResponse.json() : null;
         const customerData = await customerResponse.ok ? await customerResponse.json() : [];
         const invoiceData = await invoiceResponse.ok ? await invoiceResponse.json() : [];
@@ -108,7 +112,7 @@ export default function Profile() {
   // Loading and error states
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto ">
         <Card className="border-red-200 bg-red-50">
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-red-600">
@@ -124,7 +128,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto ">
         <Card>
           <CardContent className="p-6">
             <div className="space-y-6">
@@ -149,7 +153,7 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto">
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-muted-foreground">
@@ -163,7 +167,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto pt-8">
+
       <Tabs defaultValue="profile" className="w-full space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 mb-4">
           <TabsList className="h-auto p-1 bg-muted/20">
@@ -174,7 +179,16 @@ export default function Profile() {
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
+                      {/* Admin Button */}
+          {isAdmin && (
+            <div className="">
+              <Link href="/Admin">
+                <Button variant="link">Go to Admin Page</Button>
+              </Link>
+            </div>
+          )}
           </TabsList>
+
 
           <div className="flex items-center space-x-2">
             <div className="relative">
@@ -347,7 +361,7 @@ export default function Profile() {
                           <TableRow key={invoice.id} className="hover:bg-muted/50">
                             <TableCell className="font-medium">{invoice.id}</TableCell>
                             <TableCell>{invoice.client?.name}</TableCell>
-                            <TableCell>${invoice.totalAmount.toFixed(2)}</TableCell>
+                            <TableCell>₹{invoice.totalAmount.toFixed(2)}</TableCell>
                             <TableCell>
                               <Badge variant={invoice.paymentStatus.toLowerCase() === "paid" ? "secondary" as const : invoice.paymentStatus.toLowerCase() === "unpaid" ? "destructive" as const : "default"}>
                                 {invoice.paymentStatus}
@@ -362,7 +376,7 @@ export default function Profile() {
                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
                   <FileText className="h-8 w-8 mb-2" />
                   <p>No invoices found</p>
-                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -410,7 +424,7 @@ export default function Profile() {
                         .map((payment) => (
                           <TableRow key={payment.id} className="hover:bg-muted/50">
                             <TableCell className="font-medium">{payment.invoiceId}</TableCell>
-                            <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                            <TableCell>₹{payment.amount.toFixed(2)}</TableCell>
                             <TableCell>
                               {format(new Date(payment.paymentDate), "dd MMM yyyy")}
                             </TableCell>
@@ -464,7 +478,7 @@ export default function Profile() {
                         <TableRow key={product.id} className="hover:bg-muted/50">
                           <TableCell className="font-medium">{product.productName}</TableCell>
                           <TableCell>{product.productQuantity}</TableCell>
-                          <TableCell>${product.purchaseAmount.toFixed(2)}</TableCell>
+                          <TableCell>₹{product.purchaseAmount.toFixed(2)}</TableCell>
                           <TableCell>
                             {format(new Date(product.createdAt), "dd MMM yyyy")}
                           </TableCell>
