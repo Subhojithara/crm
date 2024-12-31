@@ -72,9 +72,7 @@ const CreateInvoice: React.FC<InvoiceProps> = ({
   createdInvoice,
 }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const invoiceNumber = createdInvoice
-    ? `INV-${createdInvoice.id}`
-    : `INV-${String(Date.now()).slice(-6)}`;
+  const invoiceNumber = createdInvoice ? createdInvoice.id : Date.now();
   const netAmountInWords = totals?.netAmount ? toWords(totals.netAmount.toFixed(2)) : '';
   const upiString = company?.upi
     ? `upi://pay?pa=${company.upi}&pn=${encodeURIComponent(company.name)}&cu=INR`
@@ -134,6 +132,12 @@ const CreateInvoice: React.FC<InvoiceProps> = ({
     <div className="min-h-screen bg-gray-100 p-4 print:p-0 print:bg-white">
       <Card className="max-w-5xl mx-auto bg-white shadow-lg print:shadow-none">
         <CardContent className="p-8 relative" ref={invoiceRef}>
+
+          {/* Tax Invoice Title */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-extrabold text-gray-900">TAX INVOICE</h1>
+          </div>
+
           {/* Header with improved styling */}
           <div className="mb-8 border-b pb-6">
             <div className="flex justify-between items-start">

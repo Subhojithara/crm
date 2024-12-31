@@ -52,52 +52,60 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      companyId, 
-      sellerId, 
-      productName, 
-      productQuantity, 
-      purchaseAmount,
-      received,
-      leaf,
-      rej,
-      shortage,
+    const {
+      companyId,
+      sellerId,
+      products,
       kantaWeight,
       truckNumber,
       chNo,
       fare,
-      remarks
+      remarks,
     } = body;
 
     // Validate required fields
-    if (!companyId || !sellerId || !productName || !productQuantity || !purchaseAmount) {
+    if (!companyId || !sellerId || !products || !Array.isArray(products) || products.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Create a new product purchase record
-    const productPurchase = await prisma.productPurchase.create({
-      data: {
-        companyId: parseInt(companyId),
-        sellerId: parseInt(sellerId),
-        productName,
-        productQuantity,
-        clerkUserId: userId, // Added required clerkUserId
-        purchaseAmount,
-        received,
-        leaf,
-        rej,
-        shortage,
-        kantaWeight,
-        truckNumber,
-        chNo,
-        fare,
-        remarks
-      },
-    });
-   
+    // Create multiple product purchase records
+    const productPurchases = await Promise.all(
+      products.map(async (product) => {
+        const {
+          productName,
+          productQuantity,
+          purchaseAmount,
+          received,
+          leaf,
+          rej,
+          shortage,
+        } = product;
+
+        return prisma.productPurchase.create({
+          data: {
+            companyId: parseInt(companyId),
+            sellerId: parseInt(sellerId),
+            productName,
+            productQuantity,
+            clerkUserId: userId,
+            purchaseAmount,
+            received,
+            leaf,
+            rej,
+            shortage,
+            kantaWeight,
+            truckNumber,
+            chNo,
+            fare,
+            remarks,
+          },
+        });
+      })
+    );
+
     // Create notification for admin/moderator
     const adminsAndModerators = await prisma.user.findMany({
       where: { role: { in: ['ADMIN', 'MODERATOR'] } },
@@ -106,7 +114,7 @@ export async function POST(request: NextRequest) {
     for (const user of adminsAndModerators) {
       await prisma.notification.create({
         data: {
-          message: `A new purchase has been made by ${user.name} ${userId} for ${productQuantity} items of ${productName} from ${companyId} at a total cost of ${purchaseAmount} INR `,
+          message: `A new purchase has been made by ${user.name} ${userId} for ${products.length} items from ${companyId} at a total cost of ${products.reduce((sum, product) => sum + product.purchaseAmount, 0)} INR `,
           type: 'new_purchase',
           user: { connect: { clerkUserId: user.clerkUserId } },
         },
@@ -114,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'Purchase saved successfully', productPurchase },
+      { message: 'Purchases saved successfully', productPurchases },
       { status: 201 }
     );
   } catch (error: unknown) {

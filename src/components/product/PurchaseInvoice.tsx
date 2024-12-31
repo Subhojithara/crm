@@ -1,182 +1,392 @@
-"use client";
-
 import React, { useRef, useState } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
-import { QRCodeCanvas } from "qrcode.react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toWords } from "number-to-words";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Download, User2, CreditCard, LucideIcon } from "lucide-react";
+import {
+  Receipt,
+  Download,
+  User2,
+  Building,
+  Phone,
+  Mail,
+  CreditCard,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Company } from "@/types/Company";
+import { Seller } from "@/types/Seller"; 
+import { ProductPurchase } from "@/types/Product";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface PurchaseInvoiceProps {
-  company: {
-    name: string;
-    address: string;
-    phone: string;
-    email: string;
-  };
-  seller: {
-    name: string;
-    address: string;
-    number: string;
-    email: string;
-  };
-  productName: string;
-  productQuantity: number;
-  purchaseAmount: number;
+  company: Company | null;
+  seller: Seller | null;
+  purchases: ProductPurchase[];
 }
 
-const PurchaseInvoice: React.FC<PurchaseInvoiceProps> = ({
+const PurchaseInvoice = ({
   company,
   seller,
-  productName,
-  productQuantity,
-  purchaseAmount,
-}) => {
+  purchases,
+}: PurchaseInvoiceProps) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
 
+  const totalAmount = purchases.reduce((sum, purchase) => {
+    return (
+      sum +
+      (isNaN(purchase.productQuantity) || isNaN(purchase.purchaseAmount)
+        ? 0
+        : purchase.productQuantity * purchase.purchaseAmount)
+    );
+  }, 0);
+  const totalAmountInWords = !isNaN(totalAmount) ? toWords(totalAmount) : "";
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",  
+    day: "numeric",
+  });
+
   const downloadPDF = async () => {
-    const input = invoiceRef.current;
-    if (input) {
-      try {
-        const canvas = await html2canvas(input, { scale: 2, backgroundColor: '#ffffff' });
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        const currentDate = new Date().toISOString().split("T")[0];
-        pdf.save(`Purchase_Invoice_${currentDate}.pdf`);
-      } catch (error) {
-        console.error("Error generating PDF:", error);
-        // Consider adding user-friendly error handling here, e.g., a toast notification.
+    if (invoiceRef.current) {
+      const pages = document.querySelectorAll(".invoice-page");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      for (let i = 0; i < pages.length; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        const canvas = await html2canvas(pages[i] as HTMLElement, {
+          scale: 4, // Increased scale for better quality
+          logging: false,
+          useCORS: true,
+          windowWidth: 794, // A4 width in pixels @96 DPI
+          windowHeight: 1123, // A4 height in pixels @96 DPI
+          backgroundColor: '#FFFFFF',
+          imageTimeout: 0,
+          onclone: (document) => {
+            // Fix font and styling issues in the cloned document
+            const styles = document.createElement('style');
+            styles.innerHTML = `
+              * { 
+                font-family: Arial, sans-serif !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+            `;
+            document.head.appendChild(styles);
+          }
+        });
+
+        const imgWidth = 210; // A4 width in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
       }
+
+      pdf.save(`${purchases[0]?.id}_purchase_invoice.pdf`);
     }
   };
 
-  const invoiceNumber = `INV-${String(Date.now()).slice(-6)}`;
-  const totalAmount = productQuantity * purchaseAmount;
-  const totalAmountInWords = toWords(totalAmount);
+  // Calculate available space for items considering header and seller details
+  const itemsOnFirstPage = 5;
+  const itemsOnOtherPages = 8;
 
-  const InfoCard = ({ icon: Icon, title, children }: { icon: LucideIcon, title: string, children: React.ReactNode }) => (
-    <div className="bg-gray-50 p-6 rounded-lg space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Icon className="w-5 h-5 text-gray-500" />
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-      </div>
-      {children}
-    </div>
-  );
+  const pagesArr: { items: ProductPurchase[]; isLastPage: boolean }[] = [];
+  const remainingItemsArr: ProductPurchase[] = [...purchases];
+  let currentItems: ProductPurchase[] = [];
+
+  while (remainingItemsArr.length > 0) {
+    const maxItems: number = pagesArr.length === 0 ? itemsOnFirstPage : itemsOnOtherPages;
+    currentItems = remainingItemsArr.splice(0, maxItems);
+
+    pagesArr.push({
+      items: currentItems,
+      isLastPage: remainingItemsArr.length === 0
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Generate Invoice</Button>
+        <Button variant="outline" className="gap-2 hover:bg-gray-50">
+          <Receipt className="w-4 h-4" />
+          Generate Purchase Bill
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px]">
-        <div className="min-h-screen bg-gray-100 p-8">
-          <Card className="max-w-5xl mx-auto bg-white shadow-lg">
-            <CardContent className="p-8" ref={invoiceRef}>
-              {/* Header */}
-              <div className="flex justify-between items-start mb-12 border-b pb-8">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{company.name}</h1>
-                  <p className="text-gray-500 max-w-md text-sm">{company.address}</p>
-                  {company.phone && <p className="text-gray-500 text-sm">{company.phone}</p>}
-                  {company.email && <p className="text-gray-500 text-sm">{company.email}</p>}
-                </div>
-                <div className="text-right space-y-2">
-                  <div className="">
-                    <p className="text-2xl font-bold">Invoice #{invoiceNumber}</p>
-                    <p className="text-sm mt-1">{new Date().toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Info Cards Grid */}
-              <div className="grid md:grid-cols-2 gap-6 mb-12">
-                <InfoCard icon={User2} title="Bill To">
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium text-gray-900">{seller.name}</p>
-                    <p className="text-gray-500">{seller.address}</p>
-                    <p className="text-gray-500">{seller.number}</p>
-                    <p className="text-gray-500">{seller.email}</p>
-                  </div>
-                </InfoCard>
-
-                <InfoCard icon={CreditCard} title="Payment Details">
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-500">UPI: {seller.email}</p>
-                  </div>
-                </InfoCard>
-              </div>
-
-              {/* Items Table */}
-              <div className="mb-12 rounded-lg overflow-hidden border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold">Product</TableHead>
-                      <TableHead className="text-right font-semibold">Quantity</TableHead>
-                      <TableHead className="text-right font-semibold">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{productName}</TableCell>
-                      <TableCell className="text-right">{productQuantity}</TableCell>
-                      <TableCell className="text-right">₹{totalAmount.toFixed(2)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Summary Section */}
-              <div className="flex justify-between items-start mb-12">
-                <div className="bg-gray-50 p-6 rounded-lg text-center">
-                  <QRCodeCanvas value={`upi://pay?pa=${seller.email}&pn=${seller.name}&cu=INR`} size={120} />
-                  <p className="text-sm text-gray-500 mt-2">Scan to pay via UPI</p>
-                </div>
-
-                <div className="bg-gray-50 p-6 rounded-lg w-96">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-lg font-bold text-gray-900">
-                      <span>Total Amount</span>
-                      <span>₹{totalAmount.toFixed(2)}</span>
+      <DialogContent className="sm:max-w-[850px]">
+        <ScrollArea className="h-[80vh] w-full rounded-md">
+          <div ref={invoiceRef} className="print-container">
+            {pagesArr.map((page, pageIndex) => {
+              return (
+                <div
+                  key={pageIndex}
+                  className="invoice-page bg-white w-[210mm] h-[297mm] relative mb-8 shadow-lg"
+                  style={{ margin: "0 auto" }}
+                >
+                  {/* Header Section */}
+                  <div className="p-4 bg-gray-100">
+                  <div className=" text-black">
+                    <div className="">
+                          <p className="text-sm text-zinc-500 font-semibold uppercase">
+                            Purchase Bill
+                          </p>
                     </div>
-                    <p className="text-sm text-gray-500 mt-2">({totalAmountInWords} Rupees)</p>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        {company && (
+                          <>
+                            <div>
+                              <h1 className="text-2xl font-bold">
+                                {company.name}
+                              </h1>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {company.address}
+                              </p>
+                              <div className="text-xs text-gray-600 mt-1">
+                                GST: {company.gst}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                        
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <div className="text-sm">
+                          <p className="text-gray-600">
+                            Bill No: <span className="font-medium">#{purchases[0]?.id}</span>
+                          </p>
+                          <p className="text-gray-600">{currentDate}</p>
+                          <p className="text-gray-500 text-xs">
+                            Page {pageIndex + 1} of {pagesArr.length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  </div>
+                  <div className="p-10 space-y-8">
+                    {pageIndex === 0 && (
+                      <div className="grid grid-cols-2 gap-8">
+                        {/* Seller Details */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <div className="bg-gray-100 p-2 rounded-md">
+                              <User2 className="w-5 h-5 text-gray-600" />
+                            </div>
+                            <p className="font-medium">Seller Details</p>
+                          </div>
+                          <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                            <div className="space-y-4">
+                              <div className="flex items-start gap-3">
+                                <Building className="w-5 h-5 text-gray-400 mt-1" />
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {seller?.name}
+                                  </p>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {seller?.address}
+                                  </p>
+                                </div>
+                              </div>
+                              <Separator />
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-2">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-600">
+                                      Contact
+                                    </p>
+                                    <p className="text-sm">{seller?.number}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-4 h-4 text-gray-400" />
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-600">
+                                      Email
+                                    </p>
+                                    <p className="text-sm break-all">
+                                      {seller?.email}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Payment Details */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <div className="bg-gray-100 p-2 rounded-md">
+                              <CreditCard className="w-5 h-5 text-gray-600" />
+                            </div>
+                            <p className="font-medium">Payment Details</p>
+                          </div>
+                          <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                            <div className="grid grid-cols-2 gap-6">
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium text-gray-900">
+                                  Bank Details
+                                </p>
+                                <div className="space-y-2">
+                                  <p className="text-sm text-gray-600">
+                                    Bank:{" "}
+                                    <span className="text-gray-900">
+                                      {company?.bankName}
+                                    </span>
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    A/C:{" "}
+                                    <span className="text-gray-900">
+                                      {company?.accountNumber}
+                                    </span>
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    IFSC:{" "}
+                                    <span className="text-gray-900">
+                                      {company?.ifsc}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium text-gray-900">
+                                  Digital Payment
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  UPI:{" "}
+                                  <span className="text-gray-900">
+                                    {company?.upi}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Products Table */}
+                    <div className="mt-8">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 hover:bg-gray-50">
+                            <TableHead className="w-1/2 font-semibold text-gray-900">
+                              Item Description
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-gray-900">
+                              Quantity
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-gray-900">
+                              Rate
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-gray-900">
+                              Amount
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {page.items.map((purchase) => (
+                            <TableRow
+                              key={purchase.id}
+                              className="hover:bg-gray-50"
+                            >
+                              <TableCell className="font-medium">
+                                {purchase.productName}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {purchase.productQuantity}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                ₹
+                                {purchase.purchaseAmount?.toFixed(2) ||
+                                  "0.00"}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                ₹
+                                {(
+                                  purchase.productQuantity *
+                                  purchase.purchaseAmount
+                                ).toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {page.isLastPage && (
+                      <>
+                        <div className="flex justify-end mt-8">
+                          <div className="bg-gray-100 p-6 rounded-xl border border-gray-200 w-96">
+                            <div className="flex justify-between items-center text-lg font-bold">
+                              <span className="text-gray-700">
+                                Total Amount
+                              </span>
+                              <span className="text-gray-900">
+                                ₹{totalAmount.toFixed(2)}
+                              </span>
+                            </div>
+                            <Separator className="my-3 bg-gray-200" />
+                            <p className="text-sm text-gray-600 italic">
+                              {totalAmountInWords} Rupees Only
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-16 absolute bottom-20 w-[calc(100%-5rem)]">
+                          <div className="grid grid-cols-2 gap-8">
+                            <div className="text-center">
+                              <Separator className="mb-4" />
+                              <p className="text-sm font-medium text-gray-900">
+                                Seller&apos;s Signature
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {seller?.name}
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <Separator className="mb-4" />
+                              <p className="text-sm font-medium text-gray-900">
+                                Company&apos;s Signature
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {company?.name}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Signature Section */}
-              <div className="grid grid-cols-2 gap-8 mt-16">
-                <div className="text-center">
-                  <Separator className="mb-4" />
-                  <p className="text-sm text-gray-500">Seller Signature</p>
-                </div>
-                <div className="text-center">
-                  <Separator className="mb-4" />
-                  <p className="text-sm text-gray-500">Company Signature</p>
-                </div>
-              </div>
-            </CardContent>
-
-            <div className="p-4 bg-gray-50 flex justify-end rounded-b-lg">
-              <Button
-                onClick={downloadPDF}
-                className="bg-blue-600 hover:bg-blue-700 gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download PDF
-              </Button>
-            </div>
-          </Card>
+              );
+            })}
+          </div>
+        </ScrollArea>
+        <div className="mt-8 flex justify-end download-button">
+          <Button
+            onClick={downloadPDF}
+            className="bg-gray-900 hover:bg-gray-800 gap-2 text-white"
+          >
+            <Download className="w-4 h-4" />
+            Download Bill
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
