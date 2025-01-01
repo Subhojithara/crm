@@ -55,6 +55,7 @@ model Company {
   updatedAt        DateTime           @updatedAt
   productPurchases ProductPurchase[]  // One-to-many relation
   invoices         InvoiceTable[]     @relation(name: "CompanyInvoices")
+  purchaseInvoices PurchaseInvoice[]
 }
 
 model Seller {
@@ -67,6 +68,7 @@ model Seller {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   productPurchases ProductPurchase[]  // One-to-many relation
+  purchaseInvoices PurchaseInvoice[]
 }
 
 model ProductPurchase {
@@ -93,6 +95,8 @@ model ProductPurchase {
   chNo            String?
   fare            Float?
   remarks         String?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+  purchaseInvoiceId Int?
 }
 
 model Notification {
@@ -251,4 +255,19 @@ enum EditStatus {
 enum DeductStatus {
   NOT_DEDUCTED
   DEDUCTED
+}
+
+model PurchaseInvoice {
+  id                Int                @id @default(autoincrement())
+  companyId         Int
+  sellerId          Int
+  totalAmount       Float
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  company           Company            @relation(fields: [companyId], references: [id])
+  seller            Seller             @relation(fields: [sellerId], references: [id])
+  productPurchases  ProductPurchase[]
+  // Add fields to store serialized company and seller details
+  companyDetails    Json
+  sellerDetails     Json
 }

@@ -139,6 +139,29 @@ const PurchaseProduct = () => {
             const responseData = await response.json();
             console.log('Purchase successful', responseData);
 
+            // Send request to create PurchaseInvoice
+            const invoiceResponse = await fetch('/api/purchase-invoice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    companyId: selectedCompanyId,
+                    sellerId: selectedSellerId,
+                    productPurchases: responseData.productPurchases, // Pass the created ProductPurchase records
+                    // ... any other data you want to store in PurchaseInvoice
+                }),
+            });
+
+            if (!invoiceResponse.ok) {
+                const errorData = await invoiceResponse.json();
+                console.error('Failed to save purchase invoice', errorData);
+                throw new Error(errorData.error || 'Failed to save purchase invoice');
+            }
+
+            const invoiceData = await invoiceResponse.json();
+            console.log('Purchase invoice saved successfully', invoiceData);
+
             toast({
                 title: "Purchase Successful",
                 description: "Your purchase has been saved successfully.",

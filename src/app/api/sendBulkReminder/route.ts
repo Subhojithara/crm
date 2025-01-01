@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const { invoiceIds } = await req.json();
 
-    console.log("Invoice IDs:", invoiceIds);
+    console.log('Invoice IDs:', invoiceIds);
 
     const invoices = await prisma.invoiceTable.findMany({
       where: {
@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log("Invoices:", invoices);
+    console.log('Invoices:', invoices);
 
-    for (const invoice of invoices) {
+    const emailPromises = invoices.map(async (invoice) => {
       const mailOptions = {
         from: process.env.NODE_MAILER_EMAIL,
         to: invoice.client.email,
@@ -62,15 +62,32 @@ export async function POST(req: NextRequest) {
 
       try {
         const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent:", info.response);
+        console.log('Email sent:', info.response);
+        return { success: true, email: invoice.client.email };
       } catch (emailError) {
         console.error(
           'Error sending email to:',
           invoice.client.email,
           emailError,
         );
-        // Handle individual email sending errors (e.g., log, retry, etc.)
+        return { success: false, email: invoice.client.email, error: emailError };
       }
+    });
+
+    const emailResults = await Promise.all(emailPromises);
+
+    const successfulEmails = emailResults.filter((result) => result.success);
+    const failedEmails = emailResults.filter((result) => !result.success);
+
+    if (failedEmails.length > 0) {
+      console.error('Failed to send emails to:', failedEmails);
+      return NextResponse.json(
+        {
+          message: 'Some reminders failed to send',
+          failedEmails: failedEmails,
+        },
+        { status: 207 },
+      );
     }
 
     return NextResponse.json(

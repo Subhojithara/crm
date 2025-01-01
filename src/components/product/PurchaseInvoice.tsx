@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -118,6 +118,28 @@ const PurchaseInvoice = ({
       isLastPage: remainingItemsArr.length === 0
     });
   }
+
+  // Fetch PurchaseInvoice data (if needed)
+  useEffect(() => {
+    const fetchPurchaseInvoice = async () => {
+      if (purchases.length > 0 && purchases[0].purchaseInvoiceId) {
+        try {
+          const response = await fetch(`/api/purchase-invoice/${purchases[0].purchaseInvoiceId}`);
+          if (response.ok) {
+            const data = await response.json();
+            // Update state with fetched PurchaseInvoice data
+            // ...
+          } else {
+            console.error('Failed to fetch purchase invoice');
+          }
+        } catch (error) {
+          console.error('Error fetching purchase invoice:', error);
+        }
+      }
+    };
+
+    fetchPurchaseInvoice();
+  }, [purchases]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

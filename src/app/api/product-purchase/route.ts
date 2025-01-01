@@ -106,6 +106,49 @@ export async function POST(request: NextRequest) {
       })
     );
 
+    // Create PurchaseInvoice after creating ProductPurchases
+    const totalAmount = productPurchases.reduce(
+      (sum, product) => sum + product.productQuantity * product.purchaseAmount,
+      0
+    );
+
+    const company = await prisma.company.findUnique({
+      where: { id: parseInt(companyId) },
+    });
+    const seller = await prisma.seller.findUnique({
+      where: { id: parseInt(sellerId) },
+    });
+
+    if (!company || !seller) {
+      return NextResponse.json(
+        { error: "Company or Seller not found" },
+        { status: 404 }
+      );
+    }
+
+    const purchaseInvoice = await prisma.purchaseInvoice.create({
+      data: {
+        companyId: parseInt(companyId),
+        sellerId: parseInt(sellerId),
+        totalAmount,
+        companyDetails: JSON.stringify(company),
+        sellerDetails: JSON.stringify(seller),
+        productPurchases: {
+          connect: productPurchases.map((product) => ({ id: product.id })),
+        },
+      },
+    });
+
+    // Update ProductPurchase records to link to PurchaseInvoice
+    await Promise.all(
+      productPurchases.map(async (product) => {
+        await prisma.productPurchase.update({
+          where: { id: product.id },
+          data: { purchaseInvoiceId: purchaseInvoice.id },
+        });
+      })
+    );
+
     // Create notification for admin/moderator
     const adminsAndModerators = await prisma.user.findMany({
       where: { role: { in: ['ADMIN', 'MODERATOR'] } },

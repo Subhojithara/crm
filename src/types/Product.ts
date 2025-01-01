@@ -21,6 +21,7 @@ export type ProductPurchase = {
   chNo?: string;
   fare?: number;
   remarks?: string;
+  purchaseInvoiceId?: number | null;
 };
 
 export type ProductSelling = {
