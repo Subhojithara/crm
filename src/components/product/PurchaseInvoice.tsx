@@ -22,7 +22,7 @@ import {
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Company } from "@/types/Company";
-import { Seller } from "@/types/Seller"; 
+import { Seller } from "@/types/Seller";
 import { ProductPurchase } from "@/types/Product";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -52,7 +52,7 @@ const PurchaseInvoice = ({
   const totalAmountInWords = !isNaN(totalAmount) ? toWords(totalAmount) : "";
   const currentDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",  
+    month: "long",
     day: "numeric",
   });
 
@@ -76,11 +76,11 @@ const PurchaseInvoice = ({
           useCORS: true,
           windowWidth: 794, // A4 width in pixels @96 DPI
           windowHeight: 1123, // A4 height in pixels @96 DPI
-          backgroundColor: '#FFFFFF',
+          backgroundColor: "#FFFFFF",
           imageTimeout: 0,
           onclone: (document) => {
             // Fix font and styling issues in the cloned document
-            const styles = document.createElement('style');
+            const styles = document.createElement("style");
             styles.innerHTML = `
               * { 
                 font-family: Arial, sans-serif !important;
@@ -89,12 +89,21 @@ const PurchaseInvoice = ({
               }
             `;
             document.head.appendChild(styles);
-          }
+          },
         });
 
         const imgWidth = 210; // A4 width in mm
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
+        pdf.addImage(
+          canvas.toDataURL("image/jpeg", 1.0),
+          "JPEG",
+          0,
+          0,
+          imgWidth,
+          imgHeight,
+          "",
+          "FAST"
+        );
       }
 
       pdf.save(`${purchases[0]?.id}_purchase_invoice.pdf`);
@@ -110,12 +119,13 @@ const PurchaseInvoice = ({
   let currentItems: ProductPurchase[] = [];
 
   while (remainingItemsArr.length > 0) {
-    const maxItems: number = pagesArr.length === 0 ? itemsOnFirstPage : itemsOnOtherPages;
+    const maxItems: number =
+      pagesArr.length === 0 ? itemsOnFirstPage : itemsOnOtherPages;
     currentItems = remainingItemsArr.splice(0, maxItems);
 
     pagesArr.push({
       items: currentItems,
-      isLastPage: remainingItemsArr.length === 0
+      isLastPage: remainingItemsArr.length === 0,
     });
   }
 
@@ -124,16 +134,19 @@ const PurchaseInvoice = ({
     const fetchPurchaseInvoice = async () => {
       if (purchases.length > 0 && purchases[0].purchaseInvoiceId) {
         try {
-          const response = await fetch(`/api/purchase-invoice/${purchases[0].purchaseInvoiceId}`);
+          const response = await fetch(
+            `/api/purchase-invoice/${purchases[0].purchaseInvoiceId}`
+          );
           if (response.ok) {
-            const data = await response.json();
+            const fetchedData = await response.json();
+            console.log("Fetched purchase invoice data:", fetchedData);
             // Update state with fetched PurchaseInvoice data
             // ...
           } else {
-            console.error('Failed to fetch purchase invoice');
+            console.error("Failed to fetch purchase invoice");
           }
         } catch (error) {
-          console.error('Error fetching purchase invoice:', error);
+          console.error("Error fetching purchase invoice:", error);
         }
       }
     };
@@ -161,44 +174,47 @@ const PurchaseInvoice = ({
                 >
                   {/* Header Section */}
                   <div className="p-4 bg-gray-100">
-                  <div className=" text-black">
-                    <div className="">
-                          <p className="text-sm text-zinc-500 font-semibold uppercase">
-                            Purchase Bill
-                          </p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        {company && (
-                          <>
-                            <div>
-                              <h1 className="text-2xl font-bold">
-                                {company.name}
-                              </h1>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {company.address}
-                              </p>
-                              <div className="text-xs text-gray-600 mt-1">
-                                GST: {company.gst}
-                              </div>
-                            </div>
-                          </>
-                        )}
+                    <div className=" text-black">
+                      <div className="">
+                        <p className="text-sm text-zinc-500 font-semibold uppercase">
+                          Purchase Bill
+                        </p>
                       </div>
-                        
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <div className="text-sm">
-                          <p className="text-gray-600">
-                            Bill No: <span className="font-medium">#{purchases[0]?.id}</span>
-                          </p>
-                          <p className="text-gray-600">{currentDate}</p>
-                          <p className="text-gray-500 text-xs">
-                            Page {pageIndex + 1} of {pagesArr.length}
-                          </p>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          {company && (
+                            <>
+                              <div>
+                                <h1 className="text-2xl font-bold">
+                                  {company.name}
+                                </h1>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {company.address}
+                                </p>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  GST: {company.gst}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <div className="text-sm">
+                            <p className="text-gray-600">
+                              Bill No:{" "}
+                              <span className="font-medium">
+                                #{purchases[0]?.id}
+                              </span>
+                            </p>
+                            <p className="text-gray-600">{currentDate}</p>
+                            <p className="text-gray-500 text-xs">
+                              Page {pageIndex + 1} of {pagesArr.length}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   </div>
                   <div className="p-10 space-y-8">
                     {pageIndex === 0 && (
@@ -336,8 +352,7 @@ const PurchaseInvoice = ({
                               </TableCell>
                               <TableCell className="text-right">
                                 ₹
-                                {purchase.purchaseAmount?.toFixed(2) ||
-                                  "0.00"}
+                                {purchase.purchaseAmount?.toFixed(2) || "0.00"}
                               </TableCell>
                               <TableCell className="text-right font-semibold">
                                 ₹

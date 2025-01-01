@@ -76,8 +76,9 @@ export async function POST(req: NextRequest) {
 
     const emailResults = await Promise.all(emailPromises);
 
-    const successfulEmails = emailResults.filter((result) => result.success);
     const failedEmails = emailResults.filter((result) => !result.success);
+
+    console.log('Successful Emails:', emailResults.filter((result) => result.success));
 
     if (failedEmails.length > 0) {
       console.error('Failed to send emails to:', failedEmails);
